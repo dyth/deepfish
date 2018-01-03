@@ -407,9 +407,9 @@ def print_pos(pos):
     print('    a b c d e f g h \n\n')
 
 
-def main():
+def main(searcher):
     pos = Position(initial, 0, (True,True), (True,True), 0, 0)
-    searcher = Searcher()
+    #searcher = Searcher()
     while True:
         print_pos(pos)
 
@@ -449,5 +449,5 @@ def main():
 
 
 if __name__ == '__main__':
-    main()
+    main(Searcher())
 
