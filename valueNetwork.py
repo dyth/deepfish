@@ -9,8 +9,6 @@ import torch.nn.functional as F
 import torch.optim as optim
 import numpy as np
 
-from boardRepresentation import *
-
 
 class EvalNet(nn.Module):
     """
@@ -21,7 +19,7 @@ class EvalNet(nn.Module):
         super(EvalNet, self).__init__()
 
         # three layers
-        self.fc1 = nn.Linear(216, 1024)
+        self.fc1 = nn.Linear(144, 1024)
         self.fc2 = nn.Linear(1024, 64)
         self.fc3 = nn.Linear(64, 1)
 
@@ -33,7 +31,6 @@ class EvalNet(nn.Module):
         
     def forward(self, inputLayer):
         'forward pass'
-        # slice input layer
         out = F.relu(self.fc1(inputLayer))
         out = F.relu(self.fc2(out))
         out = F.sigmoid(self.fc3(out))
@@ -42,10 +39,33 @@ class EvalNet(nn.Module):
 
 def forward_pass(network, board):
     'do a forward pass of the network'
-    x = torch.FloatTensor(board_to_feature_vector(board))
+    x = torch.FloatTensor(board)
     if network.use_gpu:
         x = x.cuda()
     return network(Variable(x)).data[0]
+
+
+loss_fn = torch.nn.MSELoss(size_average=False)
+
+
+def train_step(network, boards, values, LEARNING_RATE):
+    print "train"
+    optimizer = torch.optim.Adam(network.parameters(), lr=LEARNING_RATE)
+
+    for b, v in zip(boards, values):
+        x = Variable(torch.FloatTensor(b))
+        y = Variable(torch.FloatTensor([v]), requires_grad=False)
+        if network.use_gpu:
+            x = x.cuda()
+            y = y.cuda()
+        y_pred = network(x)
+
+        loss = loss_fn(y_pred, y)
+        #print(loss.data[0])
+
+        optimizer.zero_grad()
+        loss.backward()
+        optimizer.step()
 
 
 if __name__ == "__main__":

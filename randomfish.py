@@ -4,7 +4,6 @@
 from __future__ import print_function
 from collections import OrderedDict, namedtuple
 import re, sys, random
-# render not necessary
 from sunfish import Position, main
 from valueNetwork import *
 
