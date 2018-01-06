@@ -16,7 +16,6 @@ class Searcher:
 
     def __init__(self):
         self.network = EvalNet()
-        self.boards = []
 
         
     def check_valid_move(self, pos):
@@ -44,7 +43,6 @@ class Searcher:
             return None
         else:
             # append new board position to boards, return move
-            self.boards.append(board_to_small_feature_vector(newPosition.board))
             return move, newPosition.score
 
 

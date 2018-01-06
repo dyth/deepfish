@@ -42,3 +42,5 @@ profile.pstats
 
 # Vim
 *.swp
+
+*t7

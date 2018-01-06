@@ -31,7 +31,11 @@ class Searcher:
                 score = random.random()
                 if score > base:
                     base, move = score, m
-        return move, 0.0
+        if move == None:
+            # if no move possible, return None
+            return None
+        else:
+            return move, 0.0
 
 
 if __name__ == '__main__':
