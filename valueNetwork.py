@@ -27,13 +27,12 @@ class EvalNet(nn.Module):
         self.use_gpu = torch.cuda.is_available()
         if self.use_gpu:
             self.cuda()
-
         
     def forward(self, inputLayer):
         'forward pass'
         out = F.relu(self.fc1(inputLayer))
         out = F.relu(self.fc2(out))
-        out = F.sigmoid(self.fc3(out))
+        out = F.tanh(self.fc3(out))
         return out
 
 
@@ -49,7 +48,6 @@ loss_fn = torch.nn.MSELoss(size_average=False)
 
 
 def train_step(network, boards, values, LEARNING_RATE):
-    print "train"
     optimizer = torch.optim.Adam(network.parameters(), lr=LEARNING_RATE)
 
     for b, v in zip(boards, values):

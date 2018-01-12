@@ -42,7 +42,6 @@ class Searcher:
             # if no move possible, return None
             return None
         else:
-            # append new board position to boards, return move
             return move, newPosition.score
 
 

@@ -13,7 +13,7 @@ from boardRepresentation import *
 import torch, random
 
 
-LEARNING_RATE = 0.0003
+LEARNING_RATE = 0.5
 DISCOUNT_RATE = 0.7
 
 
@@ -63,16 +63,16 @@ def self_play(searchers):
 
 def train(numGames, searchers):
     'train the searcher using td learning'
-    num = 0
+    weightsNum = 1
     # train numGames
-    for _ in range(numGames):
+    for n in range(numGames):
         output = self_play(searchers)
         # if there is a winner
         if output != None:
             # print winner and final outcome
             winner, boards, finalBoard = output
             print_pos(finalBoard)
-            print(num, winner)
+            print(n, winner)
             
             # determine winner
             if winner == 0:
@@ -86,21 +86,30 @@ def train(numGames, searchers):
             #negValues = [-DISCOUNT_RATE ** i for i in range(len(boards))][::-1]
             
             train_step(searchers[0].network, positive, posValues, LEARNING_RATE)
-            if (num % 10 == 0):
-                name = "weights/" +  str(num) + ".t7"
-                torch.save(searchers[0].network.state_dict(), name)
-        else:
-            print(num, 'no winner')
-        num += 1
 
+        else:
+            print(n, 'draw')
+        if (n % 100 == 0):
+            name = "weights/" +  str((n / 100) + 1) + ".t7"
+            torch.save(searchers[0].network.state_dict(), name)
+        
 
 def validate(searchers):
     'get % wins against random agents'
-    play(searchers[0], searchers[1])
-    play(searchers[1], searchers[0])
+    learn = 0
+    for i in range(50):
+        if play(searchers[0], searchers[1]) == 0:
+            learn += 1
+        if play(searchers[1], searchers[0]) == 1:
+            learn += 1
+    with open("learn.txt", "a") as file:
+        file.write(str(learn) + "\n")
+
+        
         
 if __name__ == "__main__":
     searchers = (DeepSearcher(), RandomSearcher())
-    train(500, searchers)
-    validate(searchers)
+    while True:
+        train(1000, searchers)
+        validate(searchers)
     
