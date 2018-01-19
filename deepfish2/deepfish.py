@@ -29,7 +29,7 @@ class Searcher:
             # if no move possible, return None
             return None
         else:
-            return nextPosition._replace(score = np.array(base_score))
+            return nextPosition._replace(score = base_score)
 
         
     def search_black(self, pos, secs=None):
@@ -46,7 +46,7 @@ class Searcher:
             # if no move possible, return None
             return None
         else:
-            return nextPosition._replace(score = np.array(base_score)).rotate()
+            return nextPosition._replace(score = base_score).rotate()
 
                 
 if __name__ == '__main__':

@@ -65,7 +65,7 @@ def check(pos):
     
     
 def play(white, black):
-    'return 0 if white wins and 1 if black wins'
+    'return 1 if white wins and -1 if black wins'
     # initialise searcher and initial board
     pos = Position(initial, 0, (True,True), (True,True), 0, 0)
 
@@ -75,23 +75,21 @@ def play(white, black):
         if whiteMove == None:
             # if no possible moves and in check, then mate
             if check(pos.rotate()):
-                return 1
+                return -1
             else:
-                return
+                return 0.5
         pos = whiteMove
-        #print_pos(pos)
-        #raw_input()
+
         # if no possible black moves, white checkmate, else black ply
         blackMove = black.search_black(pos, secs=None)
         if blackMove == None:
             # if no possible moves and in check, then mate
             if check(pos):
-                return 0
+                return 1
             else:
-                return
+                return 0.5
         pos = blackMove
-        #print_pos(pos)
-        #raw_input()
+    return 0
         
 
 class Position(namedtuple('Position', 'board score wc bc ep kp')):

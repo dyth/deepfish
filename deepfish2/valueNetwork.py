@@ -72,7 +72,10 @@ def forward_pass(network, board):
     x = torch.FloatTensor(board_to_feature_vector(board))
     if network.use_gpu:
         x = x.cuda()
-    return network(Variable(x)).data
+    out = network(Variable(x)).data
+    if network.use_gpu:
+        out = out.cpu()
+    return out.numpy()
 
 
 def train_step(network, trainingPairs, LEARNING_RATE):

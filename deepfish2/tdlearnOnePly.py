@@ -22,6 +22,7 @@ def self_play(searchers):
     pos = Position(initial, 0, (True,True), (True,True), 0, 0)
     boards = [pos]
 
+    # train for 800 steps
     for _ in range(200):
         # if no possible white moves, black checkmate, else white ply
         whiteMove = random.choice(searchers).search_white(pos, secs=None)
@@ -50,60 +51,61 @@ def self_play(searchers):
 
 def train(numGames, searchers):
     'train the searcher using td learning'
-    global weightsNum
     for n in range(numGames):
         winner, positions = self_play(searchers)
-
-        boards = [p.board for p in positions]
-
-        # compute temporal difference values
-        differences = []
-        for i in range(len(positions)-1)]:
-            positions[i+1].score - positions[i].score
-
-        # then add the final board values to the differences
-        if winner == 1:
-            differences.append(np.array([1.0, -1.0]) - positions[-1].score)
-        elif winner == -1:
-            differences.append(np.array([-1.0, 1.0]) - positions[-1].score)
-        else:
-            differences.append(np.array([0.0, 0.0]) - positions[-1].score)
-
+        plys = len(positions)
         
-        if output != None:
-            # if winner, print final outcome and identity
-            winner, boards = output
-            print(n, winner)
-            print_pos(boards[-1])
-            
-            posValues = [DISCOUNT_RATE ** i for i in range(len(boards))][::-1]
-            negValues = [-DISCOUNT_RATE ** i for i in range(len(boards))][::-1]
-            if winner == 1:
-                outputs = zip(posValues, negValues)
-            elif winner == -1:
-                outputs = zip(negValues, posValues)
-            trainingPairs = zip(boards, outputs)
-            random.shuffle(trainingPairs)
-            train_step(searchers[0].network, trainingPairs, LEARNING_RATE)
-
+        # compute temporal difference values
+        diffs = [positions[i+1].score-positions[i].score for i in range(plys-1)]
+        
+        # add the final board values to differences and print final position
+        if winner == 1:
+            diffs.append(np.array([1.0, -1.0]) - positions[-1].score)
+            print(n, "White won")
+        elif winner == -1:
+            diffs.append(np.array([-1.0, 1.0]) - positions[-1].score)
+            print(n, "Black won")
         else:
-            print(n, 'draw')
+            diffs.append(np.array([0.0, 0.0]) - positions[-1].score)
+            print(n, "Draw")
+        print_pos(positions[-1])
             
-        if (n % 100 == 0):
-            name = "tdWeights/" +  str((n / 100) + 1) + ".t7"
-            torch.save(searchers[0].network.state_dict(), name)
+        # iterate over the discounted sum of future rewards from current state
+        outputs = []
+        for i in range(plys):
+            o = sum([diffs[i+j] * DISCOUNT_RATE**j for j in range(plys - i)])
+            outputs.append(o)
+
+        # create and train on (board, TD(DISCOUT_RATE)) pairs
+        boards = [p.board for p in positions]
+        trainingPairs = zip(boards, outputs)
+        train_step(searchers[0].network, trainingPairs, LEARNING_RATE)
+
+    # save weights in directory tdWeights/
+    global weightsNum
+    name = "tdWeights/" +  str(weightsNum + 1) + ".t7"
+    torch.save(searchers[0].network.state_dict(), name)
         
 
 def validate(searchers):
     'get % wins against random agents'
-    learn = 0
-    for i in range(100):
-        if play(searchers[0], searchers[1]) == 1:
-            learn += 1
-        if play(searchers[1], searchers[0]) == -1:
-            learn += 1
+    whiteWins, blackWins, stalemate = 0, 0, 0
+    for i in range(50):
+        # agent as white, random as black
+        firstPlay = play(searchers[0], searchers[1])
+        if firstPlay == 1:
+            whiteWins += 1
+        elif firstPlay == 0.5:
+            stalemate += 1
+        # random as white, agent as black
+        secondPlay = play(searchers[1], searchers[0])
+        if secondPlay == -1:
+            blackWins += 1
+        elif secondPlay == 0.5:
+            stalemate += 1
     with open("tdLearn.txt", "a") as file:
-        file.write(str(learn) + "\n")
+        l = str(whiteWins) + " " + str(blackWins) + " " + str(stalemate) + "\n"
+        file.write(l)
 
         
 if __name__ == "__main__":
@@ -112,4 +114,4 @@ if __name__ == "__main__":
     while True:
         train(1000, searchers)
         validate(searchers)
-    
+        weightsNum += 1
