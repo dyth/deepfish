@@ -62,34 +62,7 @@ def check(pos):
         if ('k' not in opponentBoard) or ('K' not in opponentBoard):
             return True
     return False
-    
-    
-def play(white, black):
-    'return 1 if white wins and -1 if black wins'
-    # initialise searcher and initial board
-    pos = Position(initial, 0, (True,True), (True,True), 0, 0)
 
-    for _ in range(200):
-        # if no possible white moves, black checkmate, else white ply
-        whiteMove = white.search_white(pos, secs=None)
-        if whiteMove == None:
-            # if no possible moves and in check, then mate
-            if check(pos.rotate()):
-                return -1
-            else:
-                return 0.5
-        pos = whiteMove
-
-        # if no possible black moves, white checkmate, else black ply
-        blackMove = black.search_black(pos, secs=None)
-        if blackMove == None:
-            # if no possible moves and in check, then mate
-            if check(pos):
-                return 1
-            else:
-                return 0.5
-        pos = blackMove
-    return 0
         
 
 class Position(namedtuple('Position', 'board score wc bc ep kp')):

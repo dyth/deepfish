@@ -18,42 +18,71 @@ class node:
         else:
             rotPos = pos.rotate()
             nextPos = [rotPos.move(m).rotate() for m in rotPos.gen_moves()]
-        return [nP for np in nextPos if check_valid_move(nP)]
+        return [nP for nP in nextPos if check_valid_move(nP)]
 
 
     def select_minimax(self, moves, player):
         'select the minimax value'
         self.bestNode, self.score = None, None
         for m in moves:
-            if (self.score == None) or (m.score[player] > self.score[player]):
-                self.bestNode, self.score = m, m.score
+            if (self.bestNode==None) or (m.score[player] > self.score[player]):
+                self.bestNode, self.score = m.pos, m.score
 
+                
+    def is_checkmate(self, pos):
+        'if in checkmate, set score to reward values'
+        # if white
+        if player == 0:
+            # if in check, then mate, otherwise stalemate draw
+            if check(pos.rotate()):
+                self.score = [1.0, -1.0]
+            else:
+                self.score = [0.0, 0.0]
+        # otherwise black
+        else:
+            # if in check, then mate, otherwise stalemate draw
+            if check(pos.rotate()):
+                self.score = [-1.0, 1.0]
+            else:
+                self.score = [0.0, 0.0]
+                
 
-    def __init__(self, pos, depth, player, network):
+    def __init__(self, pos, depth, player, network, state):
         'searches depth nodes, player is about to move on board'
         # white = 0, black = 1
+        self.pos = pos
         self.board = pos.board
+        self.bestNode = None
+        self.self_score = forward_pass(network, self.board) 
         self.score = None
         self.moves = []
         if depth == 0:
-            # if depth is 0, leaf reached, thus evaluate current board
-            self.score = forward_pass(network, self.board)
+            # if depth is 0, leaf reached, score is evaluated value
+            self.score = self.self_score
         else:
             nextPs = self.gen_all_valid_moves(pos, player)
-            # if no available moves, leaf reached, thus evaluate current board 
+            # if no available moves, terminal game state reached
             if nextPs == []:
-                self.score = forward_pass(network, self.board)
+                # if training, set reward values, otherwise score is evaluated
+                if state == 'train':
+                    self.is_checkmate()
+                else:
+                    self.score = self.self_score
             # otherwise do recursion and select the minimax value
             else:
                 for np in nextPs:
-                    self.moves.append(node(pos, depth-1, (player+1)%2, network))
+                    nextP = node(np, depth-1, (player+1) % 2, network, state)
+                    self.moves.append(nextP)
                 self.select_minimax(self.moves, player)
             
             
     def depth_first_pairs(self):
         'depth first search (board, score) pairs'
-        pairs = [(self.board, self.score)]
-        for m in self.moves:
-            pairs += m.depth_first_pairs()
-        return pairs
+        if self.moves == []:
+            return []
+        else:
+            pairs = [(self.board, self.score - self.self_score)]
+            for m in self.moves:
+                pairs += m.depth_first_pairs()
+            return pairs
         
