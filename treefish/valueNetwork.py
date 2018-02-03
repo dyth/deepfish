@@ -20,9 +20,8 @@ class EvalNet(nn.Module):
 
         # three layers
         self.fc1 = nn.Linear(96, 1024)
-        self.fc2 = nn.Linear(1024, 1024)
-        self.fc3 = nn.Linear(1024, 1024)
-        self.fc4 = nn.Linear(1024, 2)
+        self.fc2 = nn.Linear(1024, 64)
+        self.fc4 = nn.Linear(64, 2)
 
         # if cuda, use GPU
         self.use_gpu = torch.cuda.is_available()
@@ -33,7 +32,6 @@ class EvalNet(nn.Module):
         'forward pass'
         out = F.relu(self.fc1(inputLayer))
         out = F.relu(self.fc2(out))
-        out = F.relu(self.fc3(out))
         out = F.tanh(self.fc4(out))
         return out
 
@@ -53,7 +51,7 @@ def board_to_feature_vector(board):
     # {white, black} 8*Pawn, 2*Knight, 2*Bishop, 2*Rook, 9*Queen, 1*King
     pieces = ['p', 'n', 'b', 'r', 'q', 'k', 'P', 'N', 'B', 'R', 'Q', 'K']
     count = [8, 2, 2, 2, 9, 1, 8, 2, 2, 2, 9, 1]
-    countSum = [2*sum(count[:i]) for i in range(len(count))]
+    countSum = [2 * sum(count[:i]) for i in range(len(count))]
     index = dict(zip(pieces, countSum))
     # create input vector for network
     inputVector = np.full(2*sum(count), -1.0)
@@ -79,19 +77,40 @@ def forward_pass(network, board):
 
 
 def train_step(network, trainingPairs, LEARNING_RATE):
+    'train network on data trainingPairs'
     optimizer = torch.optim.Adam(network.parameters(), lr=LEARNING_RATE)
-
-    for (b, v) in trainingPairs:
-        x = Variable(torch.FloatTensor(board_to_feature_vector(b)))
-        y = Variable(torch.FloatTensor(v), requires_grad=False)
+    criterion = torch.nn.CrossEntropyLoss()
+    
+    for (board, value) in trainingPairs:
+        inputs = Variable(torch.FloatTensor(board_to_feature_vector(board)))
+        values = Variable(torch.FloatTensor(value), requires_grad=False)
         if network.use_gpu:
-            x = x.cuda()
-            y = y.cuda()
+            inputs = inputs.cuda()
+            values = values.cuda()
 
-        loss_fn = torch.nn.MSELoss(size_average=False)
-        loss = loss_fn(network(x), y)
-        #print(loss.data[0])
+        #loss_fn = torch.nn.MSELoss(size_average=False)
+        #loss = loss_fn(network(x), y)
+        #optimizer.zero_grad()
+        #loss.backward()
+        #optimizer.step()
+        #
+        #running_loss = 0.0
 
+
+        # zero the parameter gradients
         optimizer.zero_grad()
+
+        # forward + backward + optimize
+        outputs = network(inputs)
+        loss = criterion(outputs, values)
         loss.backward()
         optimizer.step()
+
+        # print statistics
+        #running_loss += loss.data[0]
+        #if i % 2000 == 1999:    # print every 2000 mini-batches
+        #    print('[%d, %5d] loss: %.3f' %
+        #          (epoch + 1, i + 1, running_loss / 2000))
+        #    running_loss = 0.0
+            
+    return network

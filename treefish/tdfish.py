@@ -21,7 +21,7 @@ class TreeStrapSearcher:
     def __init__(self):
         'set network to evalnet and minimax search depth'
         self.network = EvalNet()
-        self.depth = 4
+        self.depth = 1
 
 
     def train_white(self, pos, secs=None):
@@ -77,67 +77,62 @@ def play(white, black):
 
 def self_play(searcher):
     'return 1 if white wins and -1 if black wins'
-    # initialise searcher and initial board
+    # initialise searcher and board
     pos = Position(initial, 0, (True,True), (True,True), 0, 0)
     boards = []
-
-    # train for 800 steps
+    # train for 40 steps
     for _ in range(40):
-        # if no possible white moves, black checkmate, else white ply
+        # white's turn
         move, pairs = searcher.train_white(pos, secs=None)
         if move == None:
-            # if no possible moves and in check, then mate
+            # if no possible white moves and black check, then black mate
             if check(pos.rotate()):
-                return -1, boards
+                return -1, boards, pos
             else:
-                return 0, boards
+                return 0.5, boards, pos
         pos = move
         boards += pairs
-        
-        # if no possible black moves, white checkmate, else black ply
+        # black's turn
         move, pairs = searcher.train_black(pos, secs=None)
         if move == None:
-            # if no possible moves and in check, then mate
+            # if no possible black moves and in white check, then white mate
             if check(pos):
-                return 1, boards
+                return 1, boards, pos
             else:
-                return 0, boards
+                return 0.5, boards, pos
         pos = move
         boards += pairs
     # otherwise a draw
-    return 0, boards
+    return 0, boards, pos
 
         
 def train(numGames, searcher):
     'train the searcher using td learning'
     for n in range(numGames):
-        winner, positions = self_play(searcher)
-
-        boards = [p[0] for p in positions]
-        outputs = [p[1] for p in positions]
-        trainingPairs = zip(boards, outputs)
-        
-        # add the final board values to differences and print final position
+        # get and print outcome and final position
+        print("selfplay", n)
+        winner, boards, pos = self_play(searcher)
         if winner == 1:
             print(n, "White won")
         elif winner == -1:
             print(n, "Black won")
+        elif winner == 0.5:
+            print(n, "Stalemate")
         else:
             print(n, "Draw")
-        print(boards[-1])
-        
-        # create and train on (board, TD(DISCOUT_RATE)) pairs
-        train_step(searchers[0].network, trainingPairs, LEARNING_RATE)
-
-    # save weights in directory tdWeights/
+        print_pos(pos)
+        # train on positions
+        searcher.network = train_step(searcher.network, boards, LEARNING_RATE)
+        print("trained")
+    # save weights in directory treeStrapWeights/
     global weightsNum
-    name = "tdWeights/" +  str(weightsNum + 1) + ".t7"
+    name = "treeStrapWeights/" +  str(weightsNum + 1) + ".t7"
     torch.save(searchers[0].network.state_dict(), name)
         
 
 def validate(searchers):
     'get % wins against random agents'
-    whiteWins, blackWins, stalemate = 0, 0, 0
+    whiteWins, blackWins, stalemate, draw = 0, 0, 0, 0
     for i in range(50):
         # agent as white, random as black
         firstPlay = play(searchers[0], searchers[1])
@@ -145,15 +140,20 @@ def validate(searchers):
             whiteWins += 1
         elif firstPlay == 0.5:
             stalemate += 1
+        elif firstPlay == 0:
+            draw += 1
         # random as white, agent as black
         secondPlay = play(searchers[1], searchers[0])
         if secondPlay == -1:
             blackWins += 1
         elif secondPlay == 0.5:
             stalemate += 1
-    with open("tdLearn.txt", "a") as file:
-        l = str(whiteWins) + " " + str(blackWins) + " " + str(stalemate) + "\n"
-        file.write(l)
+        elif secondPlay == 0:
+            draw += 1
+    with open("treeStrapLearn.txt", "a") as file:
+        wins = str(whiteWins) + " " + str(blackWins) + " "
+        notWins = str(stalemate) + str(draw) + "\n"
+        file.write(wins + notWins)
 
         
 if __name__ == "__main__":
@@ -161,6 +161,6 @@ if __name__ == "__main__":
     weightsNum = 0
     while True:
         #searchers[0].network.load_state_dict(torch.load("tdWeights/11.t7"))
-        #train(1000, searchers[0])
+        train(500, searchers[0])
         validate(searchers)
         weightsNum += 1
