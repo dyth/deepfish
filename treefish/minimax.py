@@ -22,10 +22,10 @@ class node:
             return [nP.rotate() for nP in nextPos if check_valid_move(nP)]
 
 
-    def select_minimax(self, moves, player):
+    def select_minimax(self, player):
         'select the minimax value'
         self.bestNode, self.score = None, None
-        for m in moves:
+        for m in self.moves:
             if (self.bestNode==None) or (m.score[player] > self.score[player]):
                 self.bestNode, self.score = m.pos, m.score
 
@@ -36,14 +36,14 @@ class node:
         if player == 0:
             # if in check, then mate, otherwise stalemate draw
             if check(pos.rotate()):
-                self.score = [1.0, -1.0]
+                self.score = [1000.0 * 1.0, 1000.0 * -1.0]
             else:
                 self.score = [0.0, 0.0]
         # otherwise black
         else:
             # if in check, then mate, otherwise stalemate draw
             if check(pos):
-                self.score = [-1.0, 1.0]
+                self.score = [1000.0 * -1.0, 1000.0 * 1.0]
             else:
                 self.score = [0.0, 0.0]
                 
@@ -57,6 +57,7 @@ class node:
         self.self_score = forward_pass(network, self.board)
         self.score = None
         self.moves = []
+        self.noTrain = False
         
         # if no available moves, terminal game state reached
         nextPs = self.gen_all_valid_moves(pos, player)
@@ -70,20 +71,21 @@ class node:
             # if depth 0, leaf reached, score is evaluated value
             if depth == 0:
                 self.score = self.self_score
+                self.noTrain = True # do not backup leaf states
             # otherwise recursively select minimax value
             else:
                 for np in nextPs:
-                    nextP = node(np, depth-1, (player+1) % 2, network, state)
+                    nextP = node(np, depth-1, (player+1)%2, network, state)
                     self.moves.append(nextP)
-                self.select_minimax(self.moves, player)
+                self.select_minimax(player)
             
             
     def depth_first_pairs(self):
         'depth first search (board, score) pairs'
-        if self.moves == []:
+        pairs = [(self.board, self.score - self.self_score)]
+        if self.noTrain == True:
             return []
         else:
-            pairs = [(self.board, self.score - self.self_score)]
             for m in self.moves:
                 pairs += m.depth_first_pairs()
             return pairs

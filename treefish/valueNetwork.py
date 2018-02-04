@@ -20,8 +20,14 @@ class EvalNet(nn.Module):
 
         # three layers
         self.fc1 = nn.Linear(96, 1024)
-        self.fc2 = nn.Linear(1024, 64)
-        self.fc4 = nn.Linear(64, 2)
+        self.fc2 = nn.Linear(1024, 1024)
+        self.fc3 = nn.Linear(1024, 1024)
+        self.fc4 = nn.Linear(1024, 1024)
+        self.fc5 = nn.Linear(1024, 1024)
+        self.fc6 = nn.Linear(1024, 1024)
+        self.fc7 = nn.Linear(1024, 1024)
+        self.fc8 = nn.Linear(1024, 64)
+        self.fc9 = nn.Linear(64, 2)
 
         # if cuda, use GPU
         self.use_gpu = torch.cuda.is_available()
@@ -32,7 +38,13 @@ class EvalNet(nn.Module):
         'forward pass'
         out = F.relu(self.fc1(inputLayer))
         out = F.relu(self.fc2(out))
-        out = F.tanh(self.fc4(out))
+        out = F.relu(self.fc3(out))
+        out = F.relu(self.fc4(out))
+        out = F.relu(self.fc5(out))
+        out = F.relu(self.fc6(out))
+        out = F.relu(self.fc7(out))
+        out = F.relu(self.fc8(out))
+        out = 1000.0 * F.tanh(self.fc9(out))
         return out
 
     
@@ -79,38 +91,20 @@ def forward_pass(network, board):
 def train_step(network, trainingPairs, LEARNING_RATE):
     'train network on data trainingPairs'
     optimizer = torch.optim.Adam(network.parameters(), lr=LEARNING_RATE)
-    criterion = torch.nn.CrossEntropyLoss()
+    loss_fn = torch.nn.SmoothL1Loss()
     
     for (board, value) in trainingPairs:
         inputs = Variable(torch.FloatTensor(board_to_feature_vector(board)))
-        values = Variable(torch.FloatTensor(value), requires_grad=False)
+        values = Variable(torch.FloatTensor(value))
         if network.use_gpu:
             inputs = inputs.cuda()
             values = values.cuda()
-
-        #loss_fn = torch.nn.MSELoss(size_average=False)
-        #loss = loss_fn(network(x), y)
-        #optimizer.zero_grad()
-        #loss.backward()
-        #optimizer.step()
-        #
-        #running_loss = 0.0
-
 
         # zero the parameter gradients
         optimizer.zero_grad()
 
         # forward + backward + optimize
         outputs = network(inputs)
-        loss = criterion(outputs, values)
+        loss = loss_fn(outputs, values)
         loss.backward()
         optimizer.step()
-
-        # print statistics
-        #running_loss += loss.data[0]
-        #if i % 2000 == 1999:    # print every 2000 mini-batches
-        #    print('[%d, %5d] loss: %.3f' %
-        #          (epoch + 1, i + 1, running_loss / 2000))
-        #    running_loss = 0.0
-            
-    return network
