@@ -88,7 +88,7 @@ class randomTwoPlySearcher:
             # if no move possible return None, otherwise position and score
             return None, None
         else:
-            return nextPosition.rotate(), leaf
+            return nextPosition.rotate(), leaf.rotate()
 
 
 if __name__ == '__main__':

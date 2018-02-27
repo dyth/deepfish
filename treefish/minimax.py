@@ -2,9 +2,12 @@
 """
 minimax algorithm and search tree
 """
-from valueNetwork import *
+from valueNetworkKeras import *
 from slimfish import *
+import numpy as np
 
+
+np.random.seed(1729)
 
 class node:
     # node value: self.board
@@ -26,7 +29,7 @@ class node:
         'select the minimax value'
         self.bestNode, self.score = None, None
         for m in self.moves:
-            if (self.bestNode==None) or (m.score[player] > self.score[player]):
+            if (self.bestNode==None) or (m.score[0][player] > self.score[0][player]):
                 self.bestNode, self.score = m.pos, m.score
 
                 
@@ -36,16 +39,16 @@ class node:
         if player == 0:
             # if in check, then mate, otherwise stalemate draw
             if check(pos.rotate()):
-                self.score = [1000.0 * 1.0, 1000.0 * -1.0]
+                self.score = np.array([[1.0, -1.0]])
             else:
-                self.score = [0.0, 0.0]
+                self.score = np.array([[0.0, 0.0]])
         # otherwise black
         else:
             # if in check, then mate, otherwise stalemate draw
             if check(pos):
-                self.score = [1000.0 * -1.0, 1000.0 * 1.0]
+                self.score = np.array([[-1.0, 1.0]])
             else:
-                self.score = [0.0, 0.0]
+                self.score = np.array([[0.0, 0.0]])
                 
 
     def __init__(self, pos, depth, player, network, state):
@@ -54,10 +57,16 @@ class node:
         self.pos = pos
         self.board = pos.board
         self.bestNode = None
-        self.self_score = forward_pass(network, self.board)
         self.score = None
         self.moves = []
         self.noTrain = False
+
+        # if random exploration, set to random score
+        if state == 'random':
+            import numpy as np
+            self.self_score = 2.0 * np.random.rand(1, 2) - 1.0 
+        else:
+            self.self_score = forward_pass(network, self.board)
         
         # if no available moves, terminal game state reached
         nextPs = self.gen_all_valid_moves(pos, player)

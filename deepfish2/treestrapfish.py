@@ -15,11 +15,15 @@ LEARNING_RATE = 0.5
 DISCOUNT_RATE = 0.7
 
 
-class TDLeafSearcher:
+class TreestrapSearcher:
 
     def __init__(self):
         self.network = EvalNet()
 
+    def search(self, pos, player, depth):
+        'recursive search function'
+        
+        
     def search_max_white(self, pos, secs=None):
         'generate all valid moves, then greedily select largest one'
         newPositions = [pos.move(m) for m in pos.gen_moves()]

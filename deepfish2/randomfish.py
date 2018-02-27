@@ -15,13 +15,14 @@ class Searcher:
         for nP in newPositions:
             # if move is valid and scored higher than existing value, replace
             if check_valid_move(nP):
-                score = random.random()
+                score = 2.0 * random.random(2) - 1
                 if (score > base_score) or (base_score == None):
                     base_score, nextPosition = score, nP
         if nextPosition == None:
             # if no move possible, return None
             return None
         else:
+            nextPosition._replace(score = base_score)
             return nextPosition
 
         

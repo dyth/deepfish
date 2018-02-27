@@ -8,62 +8,52 @@ import numpy as np
 
 from randomfish import Searcher as RandomSearcher
 from slimfish import *
-from valueNetwork import *
+from valueNetworkKeras import *
 from minimax import node
 
 
 LEARNING_RATE = 0.5
 DISCOUNT_RATE = 0.7
+np.random.seed(1729)
 
 
 class TreeStrapSearcher:
     
     def __init__(self):
         'set network to evalnet and minimax search depth'
-        self.network = EvalNet()
-
-
-    def train_step(self, trainingPairs):
-        'train network on data trainingPairs'
-        self.optimizer = torch.optim.Adam(self.network.parameters(),lr=LEARNING_RATE)
-        self.loss_fn = torch.nn.SmoothL1Loss()
-        for (board, value) in trainingPairs:
-            inputs = Variable(torch.FloatTensor(board_to_feature_vector(board)))
-            values = Variable(torch.FloatTensor(value))
-            if self.network.use_gpu:
-                inputs = inputs.cuda()
-                values = values.cuda()
-
-            # zero the parameter gradients
-            self.optimizer.zero_grad()
-
-            # forward + backward + optimize
-            outputs = self.network(inputs)
-            loss = self.loss_fn(outputs, values)
-            loss.backward()
-            self.optimizer.step()
+        self.network = create_model()
+        self.depth = 2
+        self.threshold = 0.95
         
 
-    def train_white(self, pos, secs=None):
+    def expl(self, random):
+        'exploration or explotiation'
+        if random > self.threshold:
+            return 'random'
+        else:
+            return 'train'
+
+        
+    def train_white(self, pos, random, secs=None):
         'train white on minimax values to self.depth'
-        currentNode = node(pos, 1, 0, self.network, 'train')
+        currentNode = node(pos, self.depth, 0, self.network, self.expl(random))
         return currentNode.bestNode, currentNode.depth_first_pairs()
 
     
-    def train_black(self, pos, secs=None):
+    def train_black(self, pos, random, secs=None):
         'train black on minimax values to self.depth'
-        currentNode = node(pos, 1, 1, self.network, 'train')
+        currentNode = node(pos, self.depth, 1, self.network, self.expl(random))
         return currentNode.bestNode, currentNode.depth_first_pairs()
 
 
     def search_white(self, pos, secs=None):
         'train white on minimax values to self.depth'
-        return node(pos, 1, 0, self.network, 'search').bestNode
+        return node(pos, self.depth, 0, self.network, 'search').bestNode
         
     
     def search_black(self, pos, secs=None):
         'train black on minimax values to self.depth'
-        return node(pos, 1, 1, self.network, 'search').bestNode
+        return node(pos, self.depth, 1, self.network, 'search').bestNode
          
 
 
@@ -92,7 +82,6 @@ def play(white, black):
             else:
                 return 0.5
         pos = blackMove
-    print('cows')
     return 0
 
 
@@ -104,7 +93,8 @@ def self_play(searcher):
     # train for 40 steps
     for _ in range(40):
         # white's turn
-        move, pairs = searcher.train_white(pos, secs=None)
+        random = np.random.rand(1)
+        move, pairs = searcher.train_white(pos, random, secs=None)
         if move == None:
             # if no possible white moves and black check, then black mate
             if check(pos.rotate()):
@@ -113,10 +103,9 @@ def self_play(searcher):
                 return 0.5, boards, pos
         pos = move
         boards += pairs
-        #print_pos(pos)
-        #raw_input()
         # black's turn
-        move, pairs = searcher.train_black(pos, secs=None)
+        random = np.random.rand(1)
+        move, pairs = searcher.train_black(pos, random, secs=None)
         if move == None:
             # if no possible black moves and in white check, then white mate
             if check(pos):
@@ -125,10 +114,8 @@ def self_play(searcher):
                 return 0.5, boards, pos
         pos = move
         boards += pairs
-        #print_pos(pos)
-        #raw_input()
     # otherwise a draw
-    print(boards)
+    print(len(boards), "training examples")
     return 0, boards, pos
 
         
@@ -148,13 +135,13 @@ def train(numGames, searcher):
             print(n, "Draw")
         print_pos(pos)
         # train on positions
-        searcher.train_step(boards)
+        train_model(searcher.network, boards)
         print("trained")
     # save weights in directory treeStrapWeights/
     global weightsNum
-    name = "treeStrapWeights/" +  str(weightsNum + 1) + ".t7"
-    torch.save(searcher.network.state_dict(), name)
-        
+    name = "treeStrapWeights/" +  str(weightsNum + 1) + ".h5"
+    searcher.network.save(name)
+
 
 def validate(searchers):
     'get % wins against random agents'
@@ -178,7 +165,7 @@ def validate(searchers):
             draw += 1
     with open("treeStrapLearn.txt", "a") as file:
         wins = str(whiteWins) + " " + str(blackWins) + " "
-        notWins = str(stalemate) + str(draw) + "\n"
+        notWins = str(stalemate) + " " + str(draw) + "\n"
         file.write(wins + notWins)
 
         
@@ -186,7 +173,6 @@ if __name__ == "__main__":
     searchers = (TreeStrapSearcher(), RandomSearcher())
     weightsNum = 0
     while True:
-        #searchers[0].network.load_state_dict(torch.load("tdWeights/11.t7"))
-        train(500, searchers[0])
+        train(1000, searchers[0])
         validate(searchers)
         weightsNum += 1
