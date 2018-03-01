@@ -3,7 +3,8 @@
 Create a file searchTreeCache.csv which is DFS of depth 50 of chess game
 """
 from slimfish import *
-import csv
+from valueNetwork import board_to_feature_vector
+import csv, numpy as np
 
 
 def next_moves(pos, player):
@@ -36,19 +37,7 @@ def evaluate(pos, player):
     return score
 
 
-"""
-def next_moves(x):
-    'generate all next moves from currect position'
-    return range(x+1)[1:]
-
-
-def evaluate(x):
-    'return the value of the node'
-    return x
-"""
-
-
-def depth_first_search(depth, node, w):
+def depth_first_search(depth, node, w, w1):
     'depth first search to depth d'
     # if not at depth limit, continue
     player = depth % 2
@@ -57,7 +46,7 @@ def depth_first_search(depth, node, w):
         # if possible moves, create local stack and evaluate
         if len(nextBoards) != 0:
             depth -= 1
-            scores = [depth_first_search(depth, nB, w) for nB in nextBoards]
+            scores = [depth_first_search(depth, nB, w, w1) for nB in nextBoards]
             score = max(scores)
         # otherwise evaluate
         else:
@@ -65,11 +54,14 @@ def depth_first_search(depth, node, w):
     # otherwise evaluate leaf nodes
     else:
         score = evaluate(node, player)
-    w.writerow([str(node.board), str(score)])
+    w.writerow(score + list(board_to_feature_vector(node.board)))
+    w1.writerow(score + [node.board.replace("\n", "newline")])
     return score
 
 
-listFile = open('searchTreeCache.csv', 'wb')
-w = csv.writer(listFile)
+writeFile = open('searchTreeCache.csv', 'wb')
+writeFile1 = open('searchTreeCacheVerbose.csv', 'wb')
+w = csv.writer(writeFile)
+w1 = csv.writer(writeFile1)
 pos = Position(initial, 0, (True,True), (True,True), 0, 0)
-depth_first_search(100, pos, w)
+depth_first_search(100, pos, w, w1)
