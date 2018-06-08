@@ -1,4 +1,4 @@
-### Deepfish
+# Deepfish
 
 Sunfish + Deep Learning = Deepfish
 
